@@ -1,0 +1,26 @@
+
+
+
+
+
+
+
+
+ء
+ساستساسمس
+س
+سصدس
+
+سس
+ستtry { const lib = 
+  require("@dongdev/fca-unofficial"); 
+  console.log("✅ المكتبة تعمل ويمكن تحميلها"); 
+  console.log("نوع المكتبة:", typeof lib); 
+  console.log("المحتويات:", Object.keys(lib));
+} catch (error) {
+  console.error("❌ فشل تحميل المكتبة:"); 
+  console.error(error);
+}
+node test-library.js
+
+
