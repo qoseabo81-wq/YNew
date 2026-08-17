@@ -1,22 +1,24 @@
 import pc from "picocolors";
-import gradient from "gradient-string";
 
 export type LoggerFn = (text: string, type?: string) => void;
 
-type LogLevel = "info" | "success" | "warn" | "error" | "sys" | "system" | "core";
-type ThemeName = "cyberpunk" | "minimal";
-
-type GradientFns = {
-  cyberpunk: (s: string) => string;
-  blueToRed: (s: string) => string;
-  coolStatus: (s: string) => string;
-};
+type LogLevel =
+  | "info"
+  | "success"
+  | "warn"
+  | "error"
+  | "sys"
+  | "system"
+  | "core";
 
 type SpinnerLike = {
   text?: string;
   start?: () => SpinnerLike;
   stop?: () => SpinnerLike;
-  stopAndPersist?: (opts: { symbol: string; text: string }) => SpinnerLike;
+  stopAndPersist?: (opts: {
+    symbol: string;
+    text: string;
+  }) => SpinnerLike;
   succeed?: (text?: string) => SpinnerLike;
   fail?: (text?: string) => SpinnerLike;
   info?: (text?: string) => SpinnerLike;
@@ -24,8 +26,15 @@ type SpinnerLike = {
 };
 
 type ProgressLike = {
-  start: (total: number, startValue: number, payload?: Record<string, unknown>) => void;
-  update: (value: number, payload?: Record<string, unknown>) => void;
+  start: (
+    total: number,
+    startValue: number,
+    payload?: Record<string, unknown>
+  ) => void;
+  update: (
+    value: number,
+    payload?: Record<string, unknown>
+  ) => void;
   stop: () => void;
 };
 
@@ -36,232 +45,519 @@ type LoggerApi = LoggerFn & {
   warn: (text: string) => void;
   error: (text: string) => void;
   showBanner: () => Promise<void>;
-  startSpinner: (text: string) => Promise<SpinnerLike | null>;
-  runMethodLoadProgress: (loaded: number) => Promise<void>;
-  persistCheckpointOk: (spinner: SpinnerLike | null) => void;
-  persistLoginSuccess: (spinner: SpinnerLike | null) => void;
-  persistLoginFail: (spinner: SpinnerLike | null) => void;
+  startSpinner: (
+    text: string
+  ) => Promise<SpinnerLike | null>;
+  runMethodLoadProgress: (
+    loaded: number
+  ) => Promise<void>;
+  persistCheckpointOk: (
+    spinner: SpinnerLike | null
+  ) => void;
+  persistLoginSuccess: (
+    spinner: SpinnerLike | null
+  ) => void;
+  persistLoginFail: (
+    spinner: SpinnerLike | null
+  ) => void;
 };
 
-let oraFactory: ((options: Record<string, unknown>) => SpinnerLike) | null = null;
-let progressCtor: (new (options: Record<string, unknown>, preset?: Record<string, unknown>) => ProgressLike) | null = null;
-let progressPreset: unknown = null;
+let oraFactory:
+  | ((options: Record<string, unknown>) => SpinnerLike)
+  | null = null;
 
-let gradientFns: GradientFns | null | undefined;
+let progressCtor:
+  | (new (
+      options: Record<string, unknown>,
+      preset?: Record<string, unknown>
+    ) => ProgressLike)
+  | null = null;
 
-function writeStdout(message: string) {
+let progressPreset:
+  | Record<string, unknown>
+  | undefined;
+
+/* ======================================================
+ * Helpers
+ * ====================================================== */
+
+function writeStdout(message: string): void {
   process.stdout.write(`${message}\n`);
 }
 
-function writeStderr(message: string) {
+function writeStderr(message: string): void {
   process.stderr.write(`${message}\n`);
 }
 
-function padLabel(label: string, width = 8) {
-  return label.length >= width ? label : `${label}${" ".repeat(width - label.length)}`;
+function padLabel(
+  label: string,
+  width = 8
+): string {
+  return label.length >= width
+    ? label
+    : `${label}${" ".repeat(width - label.length)}`;
 }
 
-function getTimestamp() {
+function getTimestamp(): string {
   const now = new Date();
+
   const hh = String(now.getHours()).padStart(2, "0");
   const mm = String(now.getMinutes()).padStart(2, "0");
   const ss = String(now.getSeconds()).padStart(2, "0");
+
   return `${hh}:${mm}:${ss}`;
 }
 
-function getTheme(): ThemeName {
-  const fromEnv = String(process.env.FCA_LOG_THEME || "").toLowerCase();
-  if (fromEnv === "minimal") return "minimal";
-  return "cyberpunk";
-}
+function parseLabel(
+  message: string,
+  fallback: string
+): {
+  label: string;
+  body: string;
+} {
+  const match = message.match(
+    /^([A-Z][A-Z0-9 _-]{1,14})\s*:\s*(.+)$/
+  );
 
-function makeStyles(theme: ThemeName) {
-  if (theme === "minimal") {
+  if (!match) {
     return {
-      time: (v: string) => pc.dim(v),
-      text: (v: string) => pc.white(v),
-      info: (v: string) => pc.cyan(v),
-      warn: (v: string) => pc.yellow(v),
-      error: (v: string) => pc.red(v),
-      sys: (v: string) => pc.blue(v)
+      label: fallback,
+      body: message
     };
   }
+
   return {
-    time: (v: string) => pc.dim(v),
-    text: (v: string) => pc.white(v),
-    info: (v: string) => pc.cyan(v),
-    warn: (v: string) => pc.yellow(v),
-    error: (v: string) => pc.red(v),
-    sys: (v: string) => pc.blue(v)
+    label: match[1].trim(),
+    body: match[2]
   };
 }
 
-function parseLabel(message: string, fallback: string) {
-  const m = message.match(/^([A-Z][A-Z0-9 _-]{1,14})\s*:\s*(.+)$/);
-  if (!m) return { label: fallback, body: message };
-  return { label: m[1].trim(), body: m[2] };
-}
+function formatSuccessBody(
+  body: string
+): string {
+  const match = body.match(
+    /^Loaded (\d+) API methods(.*)$/i
+  );
 
-function loadGradientFns(): GradientFns | null {
-  if (gradientFns !== undefined) return gradientFns;
-  try {
-    const g = typeof gradient === "function" ? gradient : (gradient as { default: typeof gradient }).default;
-    if (typeof g !== "function") {
-      gradientFns = null;
-      return gradientFns;
-    }
-    gradientFns = {
-      cyberpunk: g("magenta", "cyan"),
-      blueToRed: g("#3b82f6", "#ef4444"),
-      coolStatus: g("#86efac", "#22d3ee")
-    };
-  } catch {
-    gradientFns = null;
+  if (match) {
+    return (
+      pc.dim("Loaded ") +
+      pc.cyan(pc.bold(match[1])) +
+      pc.dim(` API methods${match[2]}`)
+    );
   }
-  return gradientFns;
+
+  return pc.white(body);
 }
 
-function formatSuccessBody(body: string, grad: GradientFns | null, fallbackPaint: (s: string) => string) {
-  const m = body.match(/^Loaded (\d+) API methods(.*)$/i);
-  if (m && grad) {
-    return `${pc.dim("Loaded ")}${grad.blueToRed(m[1])}${pc.dim(` API methods${m[2]}`)}`;
-  }
-  return fallbackPaint(body);
-}
+/* ======================================================
+ * Optional UI libraries
+ * ====================================================== */
 
-async function ensureUiLibs() {
+async function ensureUiLibs(): Promise<void> {
   if (!oraFactory) {
     try {
-      const oraMod = await import("ora");
-      oraFactory = (oraMod.default ?? oraMod) as (options: Record<string, unknown>) => SpinnerLike;
+      const oraModule =
+        (await import("ora")) as unknown as {
+          default?: (
+            options: Record<string, unknown>
+          ) => SpinnerLike;
+        };
+
+      if (
+        typeof oraModule.default ===
+        "function"
+      ) {
+        oraFactory = oraModule.default;
+      }
     } catch {
-      /* ignore */
+      /* ora is optional */
     }
   }
-  if (!progressCtor || !progressPreset) {
+
+  if (!progressCtor) {
     try {
-      const progressMod = await import("cli-progress");
-      progressCtor = (progressMod.SingleBar ?? progressMod.default?.SingleBar) as new (
-        options: Record<string, unknown>,
-        preset?: Record<string, unknown>
-      ) => ProgressLike;
+      const progressModule =
+        (await import(
+          "cli-progress"
+        )) as unknown as {
+          SingleBar?: new (
+            options: Record<string, unknown>,
+            preset?: Record<string, unknown>
+          ) => ProgressLike;
+
+          Presets?: {
+            shades_classic?: Record<string, unknown>;
+          };
+
+          default?: {
+            SingleBar?: new (
+              options: Record<string, unknown>,
+              preset?: Record<string, unknown>
+            ) => ProgressLike;
+
+            Presets?: {
+              shades_classic?: Record<string, unknown>;
+            };
+          };
+        };
+
+      progressCtor =
+        progressModule.SingleBar ??
+        progressModule.default?.SingleBar ??
+        null;
+
       progressPreset =
-      progressMod.Presets?.shades_classic ?? progressMod.default?.Presets?.shades_classic ?? null;
+        progressModule.Presets
+          ?.shades_classic ??
+        progressModule.default
+          ?.Presets
+          ?.shades_classic;
     } catch {
-      /* ignore */
+      /* cli-progress is optional */
     }
   }
 }
 
-function logLine(text: string, type?: string) {
-  const level = String(type || "info").toLowerCase() as LogLevel;
+/* ======================================================
+ * Logger
+ * ====================================================== */
+
+function logLine(
+  text: string,
+  type?: string
+): void {
+  const level =
+    String(type || "info").toLowerCase() as LogLevel;
+
   const message = String(text ?? "");
-  const styles = makeStyles(getTheme());
-  const ts = styles.time(`[${getTimestamp()}]`);
-  const theme = getTheme();
-  const grad = theme === "cyberpunk" ? loadGradientFns() : null;
+
+  const timestamp = pc.dim(
+    `[${getTimestamp()}]`
+  );
+
+  /* SUCCESS */
 
   if (level === "success") {
-    const parts = parseLabel(message, "READY");
-    const bodyOut =
+    const parts = parseLabel(
+      message,
+      "READY"
+    );
+
+    const body =
       parts.label === "READY"
-        ? formatSuccessBody(parts.body, grad, styles.text)
-        : grad
-          ? grad.coolStatus(parts.body)
-          : styles.text(parts.body);
-    const labelOut = grad ? grad.coolStatus(padLabel(parts.label)) : styles.text(padLabel(parts.label));
-    writeStdout(`${ts} ${pc.bgGreen(pc.black(pc.bold(" SUCCESS ")))} ${labelOut} : ${bodyOut}`);
+        ? formatSuccessBody(parts.body)
+        : pc.white(parts.body);
+
+    const label = pc.green(
+      pc.bold(
+        padLabel(parts.label)
+      )
+    );
+
+    writeStdout(
+      `${timestamp} ` +
+      `${pc.bgGreen(
+        pc.black(
+          pc.bold(" SUCCESS ")
+        )
+      )} ` +
+      `${label} : ${body}`
+    );
+
     return;
   }
+
+  /* WARN */
 
   if (level === "warn") {
-    const parts = parseLabel(message, "WARN");
-    writeStderr(`${ts} ${styles.text(padLabel(parts.label))} : ${styles.warn(parts.body)}`);
+    const parts = parseLabel(
+      message,
+      "WARN"
+    );
+
+    writeStderr(
+      `${timestamp} ` +
+      `${pc.yellow(
+        pc.bold(
+          padLabel(parts.label)
+        )
+      )} : ` +
+      `${pc.yellow(parts.body)}`
+    );
+
     return;
   }
+
+  /* ERROR */
 
   if (level === "error") {
-    const parts = parseLabel(message, "ERROR");
-    writeStderr(`${ts} ${styles.text(padLabel(parts.label))} : ${styles.error(parts.body)}`);
+    const parts = parseLabel(
+      message,
+      "ERROR"
+    );
+
+    writeStderr(
+      `${timestamp} ` +
+      `${pc.red(
+        pc.bold(
+          padLabel(parts.label)
+        )
+      )} : ` +
+      `${pc.red(parts.body)}`
+    );
+
     return;
   }
 
-  if (level === "sys" || level === "system" || level === "core") {
-    const parts = parseLabel(message, "SYSTEM");
-    const labelOut = grad ? grad.blueToRed(padLabel(parts.label)) : styles.text(padLabel(parts.label));
-    const bodyOut = grad ? pc.dim(pc.blue(parts.body)) : styles.sys(parts.body);
-    writeStdout(`${ts} ${labelOut} : ${bodyOut}`);
+  /* SYSTEM */
+
+  if (
+    level === "sys" ||
+    level === "system" ||
+    level === "core"
+  ) {
+    const parts = parseLabel(
+      message,
+      "SYSTEM"
+    );
+
+    writeStdout(
+      `${timestamp} ` +
+      `${pc.blue(
+        pc.bold(
+          padLabel(parts.label)
+        )
+      )} : ` +
+      `${pc.dim(
+        pc.blue(parts.body)
+      )}`
+    );
+
     return;
   }
 
-  const parts = parseLabel(message, "SESSION");
-  const labelOut = grad ? grad.coolStatus(padLabel(parts.label)) : styles.text(padLabel(parts.label));
-  const bodyOut = grad ? grad.coolStatus(parts.body) : styles.info(parts.body);
-  writeStdout(`${ts} ${labelOut} : ${bodyOut}`);
+  /* INFO */
+
+  const parts = parseLabel(
+    message,
+    "SESSION"
+  );
+
+  writeStdout(
+    `${timestamp} ` +
+    `${pc.cyan(
+      pc.bold(
+        padLabel(parts.label)
+      )
+    )} : ` +
+    `${pc.cyan(parts.body)}`
+  );
 }
 
-const baseLogger = logLine as LoggerApi;
+/* ======================================================
+ * Public API
+ * ====================================================== */
 
-baseLogger.fca = (text: string) => baseLogger(`SESSION: ${text}`, "info");
-baseLogger.sys = (text: string) => baseLogger(`SYSTEM: ${text}`, "sys");
-baseLogger.success = (text: string) => baseLogger(text, "success");
-baseLogger.warn = (text: string) => baseLogger(text, "warn");
-baseLogger.error = (text: string) => baseLogger(text, "error");
+const baseLogger =
+  logLine as LoggerApi;
 
-baseLogger.showBanner = async () => {
-  /* intentionally empty — no startup banner line */
-};
-
-baseLogger.startSpinner = async (text: string) => {
-  await ensureUiLibs();
-  if (!oraFactory || !process.stdout.isTTY) return null;
-  const grad = getTheme() === "cyberpunk" ? loadGradientFns() : null;
-  const line = grad ? grad.cyberpunk(text) : pc.cyan(text);
-  const spinner = oraFactory({
-    text: line,
-    color: "cyan"
-  });
-  return typeof spinner.start === "function" ? spinner.start() : spinner;
-};
-
-baseLogger.runMethodLoadProgress = async (loaded: number) => {
-  await ensureUiLibs();
-  if (!progressCtor || !process.stdout.isTTY || loaded <= 0) return;
-  const grad = getTheme() === "cyberpunk" ? loadGradientFns() : null;
-  const prefix = grad ? grad.cyberpunk("fca · methods") : pc.cyan("fca · methods");
-  const bar = new progressCtor(
-    {
-      format: `${prefix} |{bar}| {percentage}% | {value}/{total}`,
-      barCompleteChar: "\u2588",
-      barIncompleteChar: "\u2591",
-      hideCursor: true
-    },
-    (progressPreset as Record<string, unknown> | undefined) ?? undefined
+baseLogger.fca = (
+  text: string
+): void => {
+  baseLogger(
+    `SESSION: ${text}`,
+    "info"
   );
-  bar.start(loaded, 0);
-  for (let i = 1; i <= loaded; i += 1) {
-    bar.update(i);
-  }
-  bar.stop();
 };
 
-baseLogger.persistCheckpointOk = (spinner: SpinnerLike | null) => {
-  if (spinner && typeof spinner.stop === "function") {
-    spinner.stop();
-  }
-  baseLogger("SESSION: No checkpoint detected", "info");
+baseLogger.sys = (
+  text: string
+): void => {
+  baseLogger(
+    `SYSTEM: ${text}`,
+    "sys"
+  );
 };
 
-baseLogger.persistLoginSuccess = (spinner: SpinnerLike | null) => {
-  if (spinner && typeof spinner.stop === "function") {
-    spinner.stop();
-  }
+baseLogger.success = (
+  text: string
+): void => {
+  baseLogger(
+    text,
+    "success"
+  );
 };
 
-baseLogger.persistLoginFail = (spinner: SpinnerLike | null) => {
-  if (spinner && typeof spinner.stop === "function") {
-    spinner.stop();
-  }
+baseLogger.warn = (
+  text: string
+): void => {
+  baseLogger(
+    text,
+    "warn"
+  );
 };
+
+baseLogger.error = (
+  text: string
+): void => {
+  baseLogger(
+    text,
+    "error"
+  );
+};
+
+baseLogger.showBanner =
+  async (): Promise<void> => {
+    /* Kept for API compatibility. */
+  };
+
+/* ======================================================
+ * Spinner
+ * ====================================================== */
+
+baseLogger.startSpinner =
+  async (
+    text: string
+  ): Promise<SpinnerLike | null> => {
+    await ensureUiLibs();
+
+    if (
+      !oraFactory ||
+      !process.stdout.isTTY
+    ) {
+      return null;
+    }
+
+    try {
+      const spinner =
+        oraFactory({
+          text: pc.cyan(
+            String(text ?? "")
+          ),
+          color: "cyan",
+          spinner: "dots"
+        });
+
+      if (
+        typeof spinner.start ===
+        "function"
+      ) {
+        return spinner.start();
+      }
+
+      return spinner;
+    } catch {
+      return null;
+    }
+  };
+
+/* ======================================================
+ * Method loading progress
+ * ====================================================== */
+
+baseLogger.runMethodLoadProgress =
+  async (
+    loaded: number
+  ): Promise<void> => {
+    await ensureUiLibs();
+
+    const total =
+      Number.isFinite(loaded)
+        ? Math.max(
+            0,
+            Math.floor(loaded)
+          )
+        : 0;
+
+    if (
+      !progressCtor ||
+      !process.stdout.isTTY ||
+      total <= 0
+    ) {
+      return;
+    }
+
+    try {
+      const bar =
+        new progressCtor(
+          {
+            format:
+              "fca · methods |{bar}| " +
+              "{percentage}% | " +
+              "{value}/{total}",
+
+            barCompleteChar: "\u2588",
+            barIncompleteChar: "\u2591",
+            hideCursor: true,
+            clearOnComplete: true,
+            stopOnComplete: true
+          },
+          progressPreset
+        );
+
+      bar.start(total, 0);
+
+      for (
+        let value = 1;
+        value <= total;
+        value += 1
+      ) {
+        bar.update(value);
+      }
+
+      bar.stop();
+    } catch {
+      /* UI must never break the application. */
+    }
+  };
+
+/* ======================================================
+ * Login persistence
+ * ====================================================== */
+
+function stopSpinner(
+  spinner: SpinnerLike | null
+): void {
+  if (
+    !spinner ||
+    typeof spinner.stop !==
+      "function"
+  ) {
+    return;
+  }
+
+  try {
+    spinner.stop();
+  } catch {
+    /* cosmetic failure */
+  }
+}
+
+baseLogger.persistCheckpointOk =
+  (
+    spinner: SpinnerLike | null
+  ): void => {
+    stopSpinner(spinner);
+
+    baseLogger(
+      "SESSION: No checkpoint detected",
+      "info"
+    );
+  };
+
+baseLogger.persistLoginSuccess =
+  (
+    spinner: SpinnerLike | null
+  ): void => {
+    stopSpinner(spinner);
+  };
+
+baseLogger.persistLoginFail =
+  (
+    spinner: SpinnerLike | null
+  ): void => {
+    stopSpinner(spinner);
+  };
 
 export default baseLogger;

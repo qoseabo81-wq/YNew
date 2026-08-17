@@ -38,7 +38,8 @@ export function createRefreshFbDtsgCommand(deps: RefreshFbDtsgCommandDeps) {
     if (Object.keys(payload).length === 0) {
       requestUtils
         .get("https://www.facebook.com/", ctx.jar, null, ctx.globalOptions, { noRef: true })
-        .then(({ data }: { data: string }) => {
+        .then((response) => {
+          const { data } = response as { data: string };
           const fb_dtsg = getFrom(data, '["DTSGInitData",[],{"token":"', '","');
           const jazoest = getFrom(data, "jazoest=", '",');
           if (!fb_dtsg) {

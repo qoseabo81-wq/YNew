@@ -41,8 +41,9 @@ export function createHttpPostCommand(deps: HttpPostCommandDeps) {
     const executor = notAPI ? requestUtils.post : defaultFuncs.post;
 
     executor(url, ctx.jar, payload || {}, ctx.globalOptions)
-      .then((resData: { data: Loose }) => {
-        let data = resData.data;
+      .then((resData: unknown) => {
+        const response = resData as { data: Loose };
+        let data = response.data;
         if (typeof data === "object") {
           data = JSON.stringify(data, null, 2);
         }

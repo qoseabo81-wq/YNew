@@ -35,8 +35,9 @@ export function createHttpGetQuery(deps: HttpGetQueryDeps) {
     const executor = notAPI ? requestUtils.get : defaultFuncs.get;
 
     executor(url, ctx.jar, payload || {})
-      .then((resData: { data: Loose }) => {
-        legacyCallback(null, resData.data);
+      .then((resData: unknown) => {
+        const response = resData as { data: Loose };
+        legacyCallback(null, response.data);
       })
       .catch((error: Loose) => {
         legacyCallback(error);

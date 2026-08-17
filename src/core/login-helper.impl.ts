@@ -1975,11 +1975,11 @@ function loginHelper(
         fb_dtsg,
         clientID:
           (
-            Math.random() *
-            2147483648
-          )
-            | 0
-            .toString(16),
+            (
+              Math.random() *
+              2147483648
+            ) | 0
+          ).toString(16),
         clientId:
           getFrom(
             html,
