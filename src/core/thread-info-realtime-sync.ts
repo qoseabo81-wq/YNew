@@ -414,8 +414,6 @@ export async function applyThreadInfoRealtimeEvent(
 
     if (mutated && typeof row.update === "function") {
       await row.update({ data: info });
-    } else {
-      await invalidateThreadCacheRow(Thread, threadID);
     }
   } catch (e: Loose) {
     const msg = e && e.message ? e.message : String(e);
@@ -439,12 +437,44 @@ export function attachThreadInfoRealtimeSync(
 
   const resolveApi = () => api || ctx.api;
 
+  // Serialize cache updates per thread so rapid realtime events cannot
+  // overwrite each other's changes with an older Thread.data snapshot.
+  const queues = new Map<string, Promise<void>>();
+
   ctx._syncThreadInfoFromEvent = (ev: Loose) => {
     if (!ev || ev.type !== "event" || ev.threadID == null) {
       return;
     }
+
     const tid = String(ev.threadID);
-    void applyThreadInfoRealtimeEvent(Thread, tid, ev, logger, resolveApi());
+    if (!tid) {
+      return;
+    }
+
+    const previous = queues.get(tid) || Promise.resolve();
+
+    const next = previous
+      .catch(() => undefined)
+      .then(() =>
+        applyThreadInfoRealtimeEvent(
+          Thread,
+          tid,
+          ev,
+          logger,
+          resolveApi()
+        )
+      )
+      .catch((error: Loose) => {
+        const msg = error?.message || String(error);
+        logger?.(`thread-info-realtime-sync queue: ${msg}`, "warn");
+      })
+      .finally(() => {
+        if (queues.get(tid) === next) {
+          queues.delete(tid);
+        }
+      });
+
+    queues.set(tid, next);
   };
 
   return true;

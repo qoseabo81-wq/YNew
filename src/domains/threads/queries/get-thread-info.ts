@@ -146,6 +146,11 @@ function formatThreadGraphQLResponse(data: Loose): ThreadInfo {
 
 export function createGetThreadInfoQuery(deps: GetThreadInfoQueryDeps) {
   const { defaultFuncs, api, ctx, logError } = deps;
+  const globalConfig = (global as Loose).fca?.config;
+  const disableAntiThreadInfo = Boolean(
+    globalConfig?.antiGetInfo?.AntiGetThreadInfo === true
+  );
+
   const threadData = createThreadData(api);
   const { create, get, update } = threadData || {};
   const FRESH_MS = 10 * 60 * 1000;
@@ -214,7 +219,7 @@ export function createGetThreadInfoQuery(deps: GetThreadInfoQueryDeps) {
     const result: Record<string, ThreadInfo> = {};
     const entries = Array.isArray(resData) ? (resData as Loose[]) : [];
 
-    for (let index = entries.length - 2; index >= 0; index -= 1) {
+    for (let index = entries.length - 1; index >= 0; index -= 1) {
       const item = entries[index] || {};
       const key = Object.keys(item)[0];
       const responseData = item[key];
@@ -266,10 +271,18 @@ export function createGetThreadInfoQuery(deps: GetThreadInfoQueryDeps) {
     const ids = Array.isArray(threadID) ? threadID.map((value) => String(value)) : [String(threadID)];
 
     (async () => {
-      const { fresh, stale } = await loadFromDb(ids);
+      let fresh: Record<string, ThreadInfo> = {};
+      let stale: string[] = ids;
+
+      if (!disableAntiThreadInfo) {
+        const cached = await loadFromDb(ids);
+        fresh = cached.fresh;
+        stale = cached.stale;
+      }
+
       const fetched = stale.length ? await fetchFromGraphQL(stale) : {};
 
-      if (stale.length) {
+      if (!disableAntiThreadInfo && stale.length) {
         await persist(stale, fetched);
       }
 

@@ -21,12 +21,13 @@
     "fca-config.example.json"
   ],
   "scripts": {
-    "test": "node ./test/fca.test.cjs",
+    "test": "c8 node ./test/fca.test.cjs",
     "test:build": "npm run build && node ./test/fca.test.cjs",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.typecheck.json --noEmit",
-    "build": "tsup src/index.ts --format cjs,esm --dts --clean --out-dir dist && node scripts/cjs-bridge.cjs",
-    "build:types": "tsc -p tsconfig.build.json --emitDeclarationOnly"
+    "build": "tsup && node scripts/cjs-bridge.cjs",
+    "build:types": "tsc -p tsconfig.build.json --emitDeclarationOnly",
+    "coverage": "c8 --exclude=\"node_modules/**\" --exclude=\"test/**\" --exclude=\"coverage/**\" node ./test/fca.test.cjs"
   },
   "repository": {
     "type": "git",
@@ -86,8 +87,11 @@
     "@types/duplexify": "^3.6.5",
     "@types/node": "^26.2.0",
     "@types/ws": "^8.18.1",
+    "c8": "^12.0.0",
     "eslint": "^10.8.1",
+    "pg-hstore": "^2.3.4",
     "tsup": "^8.5.1",
+    "tsx": "^4.23.12",
     "typescript": "^6.0.3"
   },
   "publishConfig": {

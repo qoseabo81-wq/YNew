@@ -45,7 +45,27 @@ function createParseDelta(deps: Loose) {
             return;
           }
           if (fmtMsg) {
-            if (!ctx.globalOptions.selfListen && fmtMsg.senderID === ctx.userID) return;
+            console.log("========== MQTT MESSAGE DEBUG ==========");
+            console.log({
+              senderID: String(fmtMsg.senderID),
+              ctxUserID: String(ctx.userID),
+              ctxFbid: String(ctx.fbid),
+              selfListen: ctx.globalOptions.selfListen,
+              same: String(fmtMsg.senderID) === String(ctx.userID),
+              body: fmtMsg.body,
+              threadID: fmtMsg.threadID
+            });
+            console.log("========================================");
+
+            if (
+              !ctx.globalOptions.selfListen &&
+              String(fmtMsg.senderID) === String(ctx.userID)
+            ) {
+              console.log("[SELF FILTER] Message ignored");
+              return;
+            }
+
+            console.log("[EVENT PASS] Message sent to globalCallback");
             if (typeof ctx._updateThreadFromMessage === "function") {
               try {
                 ctx._updateThreadFromMessage(fmtMsg);

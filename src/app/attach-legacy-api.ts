@@ -12,7 +12,7 @@ import type { FcaClientNamespace, FcaClientNamespaces } from "../types/client";
 import { EventEmitter } from "node:events";
 import mqtt from "mqtt";
 import WebSocket from "ws";
-import HttpsProxyAgent from "https-proxy-agent";
+import { HttpsProxyAgent } from "https-proxy-agent";
 import legacyLog from "../func/logAdapter";
 import runtimeLogger from "../func/logger";
 import createEmitAuth from "../domains/realtime/emit-auth";
