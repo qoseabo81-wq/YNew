@@ -12,7 +12,7 @@ Fca_Database/
 *.sqlite
 
 # Build output
-dist/
+
 
 # Session / credentials (never commit)
 appstate.json
