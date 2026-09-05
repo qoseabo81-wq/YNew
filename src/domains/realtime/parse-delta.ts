@@ -40,7 +40,15 @@ function createParseDelta(deps: Loose) {
         if (!delta.attachments || i === delta.attachments.length || getType(delta.attachments) !== "Array") {
           let fmtMsg;
           try {
-            fmtMsg = formatDeltaMessage(delta);
+            console.log("🔥 [RAW THREAD KEY]", JSON.stringify({
+  class: delta?.class,
+  actorFbId: delta?.messageMetadata?.actorFbId,
+  threadKey: delta?.messageMetadata?.threadKey,
+  body: delta?.body,
+  messageId: delta?.messageMetadata?.messageId
+}, null, 2));
+
+          fmtMsg = formatDeltaMessage(delta);
           } catch (err) {
             return;
           }
