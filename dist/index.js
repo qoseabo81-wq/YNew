@@ -23536,6 +23536,12 @@ var require_parse_delta = __commonJS({
       const { parseAndCheckLogin: parseAndCheckLogin3 } = deps;
       return function parseDelta2(defaultFuncs, api, ctx, globalCallback, { delta }) {
         if (delta.class === "NewMessage") {
+          console.log("\u{1F525} [RAW NEW MESSAGE]", JSON.stringify({
+            actorFbId: delta?.messageMetadata?.actorFbId,
+            threadKey: delta?.messageMetadata?.threadKey,
+            body: delta?.body,
+            messageId: delta?.messageMetadata?.messageId
+          }, null, 2));
           const resolveAttachmentUrl = (i) => {
             if (!delta.attachments || i === delta.attachments.length || getType15(delta.attachments) !== "Array") {
               let fmtMsg;

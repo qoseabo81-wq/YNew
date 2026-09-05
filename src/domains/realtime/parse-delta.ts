@@ -36,6 +36,13 @@ function createParseDelta(deps: Loose) {
   const { parseAndCheckLogin } = deps;
   return function parseDelta(defaultFuncs: Loose, api: Loose, ctx: Loose, globalCallback: Loose, { delta }: { delta: Loose }) {
     if (delta.class === "NewMessage") {
+      console.log("🔥 [RAW NEW MESSAGE]", JSON.stringify({
+        actorFbId: delta?.messageMetadata?.actorFbId,
+        threadKey: delta?.messageMetadata?.threadKey,
+        body: delta?.body,
+        messageId: delta?.messageMetadata?.messageId
+      }, null, 2));
+
       const resolveAttachmentUrl = (i: number) => {
         if (!delta.attachments || i === delta.attachments.length || getType(delta.attachments) !== "Array") {
           let fmtMsg;
