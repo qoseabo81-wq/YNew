@@ -163,6 +163,13 @@ function formatDeltaMessage(m: Loose) {
   }, null, 2));
 
   var md = m.messageMetadata;
+
+  console.log("🔥 [FORMAT RAW THREAD KEY]", JSON.stringify({
+    actorFbId: md?.actorFbId,
+    threadKey: md?.threadKey,
+    body: m?.body,
+    messageId: md?.messageId
+  }, null, 2));
   var body = m.body || "";
   var mentions = getMentionsFromDeltaMessage(m);
   var args = body === "" ? [] : body.trim().split(/\s+/);
