@@ -155,6 +155,13 @@ function getMentionsFromDeltaMessage(m: Loose) {
 }
 
 function formatDeltaMessage(m: Loose) {
+  console.log("🔥 [FORMAT RAW THREAD KEY]", JSON.stringify({
+    actorFbId: m?.messageMetadata?.actorFbId,
+    threadKey: m?.messageMetadata?.threadKey,
+    body: m?.body,
+    messageId: m?.messageMetadata?.messageId
+  }, null, 2));
+
   var md = m.messageMetadata;
   var body = m.body || "";
   var mentions = getMentionsFromDeltaMessage(m);

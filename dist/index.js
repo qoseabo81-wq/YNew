@@ -958,6 +958,12 @@ var require_delta = __commonJS({
       return mentions;
     }
     function formatDeltaMessage(m) {
+      console.log("\u{1F525} [FORMAT RAW THREAD KEY]", JSON.stringify({
+        actorFbId: m?.messageMetadata?.actorFbId,
+        threadKey: m?.messageMetadata?.threadKey,
+        body: m?.body,
+        messageId: m?.messageMetadata?.messageId
+      }, null, 2));
       var md = m.messageMetadata;
       var body = m.body || "";
       var mentions = getMentionsFromDeltaMessage(m);
