@@ -23564,7 +23564,7 @@ var require_parse_delta = __commonJS({
                   message_sender: delta?.message_sender,
                   metadata: delta?.messageMetadata
                 }, null, 2));
-                console.log("\u{1F525} [DELTA DATA FULL]", JSON.stringify(delta?.data, null, 2));
+                console.log("\u{1F525} [DELTA THREAD SUBTYPE]", delta?.messageMetadata?.threadSubtype);
                 console.log("\u{1F525} [DELTA KEYS]", Object.keys(delta || {}));
                 console.log("\u{1F525} [METADATA KEYS]", Object.keys(delta?.messageMetadata || {}));
                 console.log("\u{1F525} [DELTA ACTOR CANDIDATES]", JSON.stringify({
