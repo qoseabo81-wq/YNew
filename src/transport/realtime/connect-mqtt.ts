@@ -267,6 +267,7 @@ function createListenMqtt(deps: Loose) {
 
     mqttClient.on("message", function (topic: string, message: Loose) {
       if (ctx._ending || ctx.mqttClient !== mqttClient) return;
+      console.log("🔥 [MQTT TOPIC]", topic);
       try {
         let jsonMessage = Buffer.isBuffer(message) ? Buffer.from(message).toString() : message;
         try {

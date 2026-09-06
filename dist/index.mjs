@@ -24458,6 +24458,7 @@ var require_connect_mqtt = __commonJS({
         });
         mqttClient.on("message", function(topic, message) {
           if (ctx._ending || ctx.mqttClient !== mqttClient) return;
+          console.log("\u{1F525} [MQTT TOPIC]", topic);
           try {
             let jsonMessage = Buffer.isBuffer(message) ? Buffer.from(message).toString() : message;
             try {
