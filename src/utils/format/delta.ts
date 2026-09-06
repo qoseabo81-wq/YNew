@@ -164,9 +164,11 @@ function formatDeltaMessage(m: Loose) {
 
   var md = m.messageMetadata;
 
-  console.log("🔥 [FORMAT RAW THREAD KEY]", JSON.stringify({
+  console.log("🔥 [FORMAT PARTICIPANTS]", JSON.stringify({
     actorFbId: md?.actorFbId,
     threadKey: md?.threadKey,
+    participants: m?.participants,
+    participantsCount: Array.isArray(m?.participants) ? m.participants.length : null,
     body: m?.body,
     messageId: md?.messageId
   }, null, 2));

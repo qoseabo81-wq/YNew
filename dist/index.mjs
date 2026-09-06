@@ -965,9 +965,11 @@ var require_delta = __commonJS({
         messageId: m?.messageMetadata?.messageId
       }, null, 2));
       var md = m.messageMetadata;
-      console.log("\u{1F525} [FORMAT RAW THREAD KEY]", JSON.stringify({
+      console.log("\u{1F525} [FORMAT PARTICIPANTS]", JSON.stringify({
         actorFbId: md?.actorFbId,
         threadKey: md?.threadKey,
+        participants: m?.participants,
+        participantsCount: Array.isArray(m?.participants) ? m.participants.length : null,
         body: m?.body,
         messageId: md?.messageId
       }, null, 2));
