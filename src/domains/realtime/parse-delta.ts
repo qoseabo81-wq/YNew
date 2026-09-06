@@ -47,6 +47,32 @@ function createParseDelta(deps: Loose) {
         if (!delta.attachments || i === delta.attachments.length || getType(delta.attachments) !== "Array") {
           let fmtMsg;
           try {
+            console.log("🔥 [DELTA KEYS]", Object.keys(delta || {}));
+            console.log("🔥 [METADATA KEYS]", Object.keys(delta?.messageMetadata || {}));
+            console.log("🔥 [DELTA ACTOR CANDIDATES]", JSON.stringify({
+              actorFbId: delta?.messageMetadata?.actorFbId,
+              senderId: delta?.senderId,
+              senderID: delta?.senderID,
+              author: delta?.author,
+              from: delta?.from,
+              messageSenderId: delta?.messageSenderId,
+              message_sender: delta?.message_sender,
+              metadata: delta?.messageMetadata
+            }, null, 2));
+
+            console.log("🔥 [DELTA KEYS]", Object.keys(delta || {}));
+            console.log("🔥 [METADATA KEYS]", Object.keys(delta?.messageMetadata || {}));
+            console.log("🔥 [DELTA ACTOR CANDIDATES]", JSON.stringify({
+              actorFbId: delta?.messageMetadata?.actorFbId,
+              senderId: delta?.senderId,
+              senderID: delta?.senderID,
+              author: delta?.author,
+              from: delta?.from,
+              messageSenderId: delta?.messageSenderId,
+              message_sender: delta?.message_sender,
+              metadata: delta?.messageMetadata
+            }, null, 2));
+
             console.log("🔥 [RAW THREAD KEY]", JSON.stringify({
   class: delta?.class,
   actorFbId: delta?.messageMetadata?.actorFbId,

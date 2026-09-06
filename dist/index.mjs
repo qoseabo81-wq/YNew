@@ -23550,6 +23550,30 @@ var require_parse_delta = __commonJS({
             if (!delta.attachments || i === delta.attachments.length || getType15(delta.attachments) !== "Array") {
               let fmtMsg;
               try {
+                console.log("\u{1F525} [DELTA KEYS]", Object.keys(delta || {}));
+                console.log("\u{1F525} [METADATA KEYS]", Object.keys(delta?.messageMetadata || {}));
+                console.log("\u{1F525} [DELTA ACTOR CANDIDATES]", JSON.stringify({
+                  actorFbId: delta?.messageMetadata?.actorFbId,
+                  senderId: delta?.senderId,
+                  senderID: delta?.senderID,
+                  author: delta?.author,
+                  from: delta?.from,
+                  messageSenderId: delta?.messageSenderId,
+                  message_sender: delta?.message_sender,
+                  metadata: delta?.messageMetadata
+                }, null, 2));
+                console.log("\u{1F525} [DELTA KEYS]", Object.keys(delta || {}));
+                console.log("\u{1F525} [METADATA KEYS]", Object.keys(delta?.messageMetadata || {}));
+                console.log("\u{1F525} [DELTA ACTOR CANDIDATES]", JSON.stringify({
+                  actorFbId: delta?.messageMetadata?.actorFbId,
+                  senderId: delta?.senderId,
+                  senderID: delta?.senderID,
+                  author: delta?.author,
+                  from: delta?.from,
+                  messageSenderId: delta?.messageSenderId,
+                  message_sender: delta?.message_sender,
+                  metadata: delta?.messageMetadata
+                }, null, 2));
                 console.log("\u{1F525} [RAW THREAD KEY]", JSON.stringify({
                   class: delta?.class,
                   actorFbId: delta?.messageMetadata?.actorFbId,
