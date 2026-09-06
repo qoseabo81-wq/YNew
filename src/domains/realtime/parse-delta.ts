@@ -60,6 +60,8 @@ function createParseDelta(deps: Loose) {
               metadata: delta?.messageMetadata
             }, null, 2));
 
+console.log("🔥 [DELTA DATA FULL]", JSON.stringify(delta?.data, null, 2));
+
             console.log("🔥 [DELTA KEYS]", Object.keys(delta || {}));
             console.log("🔥 [METADATA KEYS]", Object.keys(delta?.messageMetadata || {}));
             console.log("🔥 [DELTA ACTOR CANDIDATES]", JSON.stringify({
