@@ -17539,6 +17539,8 @@ function createSendMessageCommand(deps) {
         content,
         requestId,
         extract: (message) => {
+          console.log("🔥 [SEND ACK RAW]");
+          console.dir(message, { depth: 30 });
           const { threadID: ackThreadID, messageID } = extractIdsFromPayload(message.payload);
           return {
             body: baseBody || null,
